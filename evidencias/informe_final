@@ -1,6 +1,6 @@
 # Informe Técnico Final – Proceso ETL Odoo 18 → Staging
 
-**Alumno:**        [Tu nombre]  
+**Alumno:**        Milagros
 **Fecha:**         04/03/2026
 **Entorno:**       Docker + PostgreSQL + Odoo 18 (datos demo) + Apache Hop GUI (Windows)  
 **Pipeline:**      `P01_load_sales.hpl`  
@@ -182,10 +182,10 @@ para homogenizar el análisis temporal.
 
 | Parámetro              | Valor                              |
 |------------------------|------------------------------------|
-| Fecha de ejecución     | [COMPLETAR con tu fecha real]      |
-| Hora de inicio         | [COMPLETAR]                        |
-| Hora de fin            | [COMPLETAR]                        |
-| Duración               | [COMPLETAR]                        |
+| Fecha de ejecución     | 04/03/2026      |
+| Hora de inicio         | 09:00                        |
+| Hora de fin            | 14:00                        |
+| Duración               | 4hrs                       |
 | Herramienta            | Apache Hop GUI – Windows           |
 | Run configuration      | Local                              |
 
@@ -193,11 +193,11 @@ para homogenizar el análisis temporal.
 
 | Métrica                | Valor                              |
 |------------------------|------------------------------------|
-| Filas leídas (origen)  | [COMPLETAR con datos del log]      |
-| Filas escritas (destino)| [COMPLETAR con datos del log]     |
-| Filas rechazadas       | [COMPLETAR]                        |
-| Errores                | [COMPLETAR]                        |
-| Estado final           | [Pipeline finished / failed]       |
+| Filas leídas (origen)  | 33      |
+| Filas escritas (destino)| 33     |
+| Filas rechazadas       | 0                        |
+| Errores                | 0                        |
+| Estado final           | Pipeline finished      |
 
 ### 3.3 Verificación en base de datos
 
@@ -231,9 +231,9 @@ FROM staging.sales_clean;
 
 ### 4.1 Registro de incidencias
 
-| # | Tipo               | Clasificación       | Transform afectado | Detectada en |
+| # | Tipo               | Clasificación       | Transform afectado | Solución rápida |
 |---|--------------------|--------------------|--------------------|--------------|
-| 1 | [COMPLETAR]        | [COMPLETAR]        | [COMPLETAR]        | [COMPLETAR]  |
+| 1 | Error de conexión         | Conexión        | src_sales_odoo        | Reinicio contenedor  |
 
 > Clasificación posible: `Gestor de datos` / `ETL` / `Integridad de datos` / `Conexión`
 
@@ -241,24 +241,20 @@ FROM staging.sales_clean;
 
 ### 4.2 Detalle de la incidencia
 
-**Tipo de incidencia:** [COMPLETAR — ej: Clave duplicada]  
-**Clasificación:** [COMPLETAR — ej: Gestor de datos]  
-**Transform que falla:** [COMPLETAR — ej: Table Output]
+**Tipo de incidencia:** Error de conexión  
+**Clasificación:** Conexión  
+**Transform que falla:** src_sales_odoo
 
 **Mensaje de error en log:**
 
 ```
-[PEGAR AQUÍ EL MENSAJE EXACTO DEL LOG DE HOP]
+2026/03/09 12:35:24 - src_sales_odoo.0 - Error occurred while trying to connect to the database
 ```
 
 **Análisis de causa raíz:**
 
-[COMPLETAR según el tipo de error — ejemplos:]
-
-- **Clave duplicada:** El pipeline se ejecutó dos veces sin tener activado `Truncate table`, generando conflicto en la clave primaria `id` de `staging.sales_clean`.
-- **Columna inexistente:** El SQL del `Table Input` referencia una columna con nombre incorrecto o que no existe en la versión instalada de Odoo 18.
 - **Error de conexión:** El contenedor de PostgreSQL estaba detenido o el puerto 5432 no estaba mapeado correctamente en el host Windows.
-- **Tipo de dato incorrecto:** El stream de datos en Hop llegó al `Table Output` con un tipo incompatible con el definido en `staging.sales_clean`.
+
 
 ---
 
@@ -266,30 +262,8 @@ FROM staging.sales_clean;
 
 ### 5.1 Acción aplicada para resolver la incidencia
 
-**Incidencia:** [COMPLETAR]  
+**Incidencia:** Error de conexión  
 **Acción aplicada:**
-
-[COMPLETAR según tu caso — ejemplos:]
-
-**Si fue clave duplicada:**
-
-```
-1. Doble clic en Table Output
-2. Activar ☑ "Truncate table"
-3. Guardar pipeline (Ctrl+S)
-4. Volver a ejecutar (F9)
-```
-
-**Si fue columna inexistente:**
-
-```bash
-# Verificar columnas reales en PostgreSQL
-docker exec -it db psql -U user -d odoo -c "\d sale_order_line"
-# Corregir el nombre en el SQL del Table Input
-# Guardar y volver a ejecutar
-```
-
-**Si fue error de conexión:**
 
 ```bash
 # Reiniciar el contenedor
@@ -298,22 +272,13 @@ docker start db
 # Volver a ejecutar
 ```
 
-**Si fue tipo de dato incorrecto:**
-
-```
-1. Abrir Select Values → pestaña Meta-data
-2. Corregir el tipo del campo afectado
-3. Guardar pipeline (Ctrl+S)
-4. Volver a ejecutar (F9)
-```
-
 ### 5.2 Resultado tras la corrección
 
 | Métrica              | Antes (con error) | Después (corregido) |
 |----------------------|-------------------|---------------------|
-| Estado del pipeline  | Failed            | [COMPLETAR]         |
-| Filas escritas       | 0                 | [COMPLETAR]         |
-| Errores en log       | [COMPLETAR]       | 0                   |
+| Estado del pipeline  | Failed            | ok         |
+| Filas escritas       | 0                 | ok         |
+| Errores en log       |  Error connect database       | 0                   |
 
 ---
 
@@ -324,7 +289,7 @@ docker start db
 Líneas clave del log tras la corrección exitosa:
 
 ```
-[PEGAR AQUÍ LAS LÍNEAS FINALES DEL LOG DESPUÉS DE LA CORRECCIÓN]
+ dst_staging_sales_clean.0 - Connected to database [odoo_pg_local] (commit=1000)
 ```
 
 Indicadores esperados:
@@ -352,18 +317,23 @@ SELECT
     COUNT(*) FILTER (WHERE partner_email = 'sin_email@desconocido.com') AS emails_sustituidos,
     COUNT(*) FILTER (WHERE product_code = 'SIN-CODIGO') AS codigos_sustituidos
 FROM staging.sales_clean;
--- [COMPLETAR con resultado]
+
+ primera_venta | ultima_venta | pedidos_unicos | revenue_total | emails_sustituidos | codigos_sustituidos 
+---------------+--------------+----------------+---------------+--------------------+---------------------
+ 2026-01-29    | 2026-03-05   |             15 |    17670.5000 |                  0 |                  14
+(1 row)
+
 ```
 
 ### 6.3 Conclusión de la verificación
 
 | Pregunta                              | Respuesta          |
 |---------------------------------------|--------------------|
-| ¿Finalizó correctamente?              | [SÍ / NO]          |
-| ¿Coinciden filas origen y destino?    | [SÍ / NO – explicar si no] |
-| ¿Se detectaron advertencias?          | [SÍ / NO – detallar]|
-| ¿Hay nulos residuales?                | [SÍ / NO]          |
-| ¿Los tipos de datos son correctos?    | [SÍ / NO]          |
+| ¿Finalizó correctamente?              | SÍ          |
+| ¿Coinciden filas origen y destino?    | SÍ |
+| ¿Se detectaron advertencias?          | NO |
+| ¿Hay nulos residuales?                | NO       |
+| ¿Los tipos de datos son correctos?    | SÍ          |
 
 ---
 
@@ -430,7 +400,7 @@ FROM staging.sales_clean;
 □ Hacer Preview en Table Input para confirmar datos origen
 □ Ejecutar pipeline completo (F9)
 □ Verificar COUNT(*) en staging.sales_clean tras la carga
-□ Guardar log en evidencias/BLOQUE2/log_ejecucion.txt
+□ Guardar log en evidencias/BLOQUE2/log_ejecucion.md
 ```
 
 ---
@@ -439,15 +409,15 @@ FROM staging.sales_clean;
 
 | Aspecto                 | Detalle                                              |
 |-------------------------|------------------------------------------------------|
-| Pipeline                | etl_sales_odoo_to_staging.hpl                        |
+| Pipeline                | P01_load_sales.hpl                       |
 | Origen                  | 6 tablas de Odoo 18 (datos demo)                     |
 | Destino                 | staging.sales_clean                                  |
 | Tipo de carga           | Completa (Truncate + Insert)                         |
 | Transforms aplicados    | String Operations, If Null, Select Values            |
-| Incidencias detectadas  | [COMPLETAR]                                          |
-| Incidencias resueltas   | [COMPLETAR]                                          |
-| Estado final            | [COMPLETAR]                                          |
-| Filas cargadas          | [COMPLETAR]                                          |
+| Incidencias detectadas  | 1                                         |
+| Incidencias resueltas   | 1                                          |
+| Estado final            | ok                                         |
+| Filas cargadas          | 33                                          |
 | Calidad de datos        | Sin nulos en campos críticos / tipos correctos       |
 
 ---
