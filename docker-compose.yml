@@ -1,0 +1,36 @@
+services:
+  web:                           # Servicio principal de Odoo (aplicación web)
+    container_name: ${WEB_HOST}  # Nombre del contenedor, tomado de la variable de entorno WEB_HOST
+    image: ${WEB_IMAGE_NAME}     # Imagen Docker a usar para Odoo (por ejemplo: odoo:18), viene de WEB_IMAGE_NAME
+    depends_on:
+      - db                       # Indica que este servicio espera a que el servicio "db" esté levantado
+    ports:
+      - "${WEB_PORT}:8069"       # Mapea el puerto interno 8069 de Odoo al puerto WEB_PORT del host (interfaz web)
+      - "${WEBSOCKET_PORT}:8072" # Mapea el puerto interno 8072 (live chat / longpolling) al puerto WEBSOCKET_PORT del host
+    volumes:
+      - odoo-web-data:/var/lib/odoo  # Volumen persistente para los datos de Odoo (archivos, sesiones, etc.)
+      - ./config:/etc/odoo           # Carpeta local ./config montada como /etc/odoo dentro del contenedor
+                                     # → aquí debe estar el archivo odoo.conf
+      - ./addons:/mnt/extra-addons   # Carpeta local ./addons para módulos personalizados de Odoo
+    entrypoint: "/usr/bin/odoo -c /etc/odoo/odoo.conf"
+                                     # Sobrescribe el entrypoint por defecto para arrancar Odoo
+                                     # usando el fichero de configuración /etc/odoo/odoo.conf
+
+  db:                            # Servicio de base de datos PostgreSQL
+    container_name: ${DB_HOST}   # Nombre del contenedor de base de datos (variable DB_HOST)
+    image: ${DB_IMAGE}           # Imagen de PostgreSQL a usar (por ejemplo: postgres:15), desde DB_IMAGE
+    environment:
+      - POSTGRES_DB=${DB_NAME}         # Nombre de la base de datos inicial que se crea
+      - POSTGRES_PASSWORD=${DB_PASSWORD} # Contraseña del usuario de PostgreSQL
+      - POSTGRES_USER=${DB_USER}       # Usuario principal de PostgreSQL
+      - PGDATA=/var/lib/postgresql/data/pgdata
+                                      # Directorio interno donde PostgreSQL guardará los datos
+    ports:
+      - "${DB_PORT}:5432"             # Mapea el puerto interno 5432 (PostgreSQL) al puerto DB_PORT del host
+    volumes:
+      - odoo-db-data:/var/lib/postgresql/data/pgdata
+                                      # Volumen persistente para los datos de la base de datos
+
+volumes:
+  odoo-db-data:                  # Volumen nombrado para los datos de PostgreSQL
+  odoo-web-data:                 # Volumen nombrado para los datos de Odoo
